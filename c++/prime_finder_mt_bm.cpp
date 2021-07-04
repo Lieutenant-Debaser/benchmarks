@@ -12,6 +12,7 @@
 #define THREAD_LIMITER 4   // <= Change to set the upper limit on the number of threads that can be used
 
 void parse_cli (int argc, char* argv [], int& upper_limit, int& thread_count);
+bool print_help (int argc, char* argv []);
 void calculate_primes (unsigned int upper_limit, int thread_id);
 
 int main (int argc, char* argv []) {
@@ -19,25 +20,34 @@ int main (int argc, char* argv []) {
     int upper_limit = 10000;
     int thread_count = 2;
     std::vector <std::thread*> thread_list;
+    bool do_benchmark = true;
 
     // Test for command line arguments
-    if ((argc > 1) && (argc % 2 != 0)) {
-        parse_cli (argc, argv, upper_limit, thread_count);
+    if (argc > 1) {
+        switch (argc % 2) {
+            case 0:
+                do_benchmark = !(print_help (argc, argv));
+                break;
+            case 1:
+                parse_cli (argc, argv, upper_limit, thread_count);
+        }
     }
 
-    // Create number of threads specified and launch them
-    for (unsigned int i = 0; i < thread_count; i++) {
-        thread_list.push_back (new std::thread (calculate_primes, upper_limit, i));
-    }
+    if (do_benchmark) {
+        // Create number of threads specified and launch them
+        for (unsigned int i = 0; i < thread_count; i++) {
+            thread_list.push_back (new std::thread (calculate_primes, upper_limit, i));
+        }
 
-    // Wait for threads to finish so they can be joined
-    for (unsigned int i = 0; i < thread_count; i++) {
-        thread_list [i]->join ();
-    }
+        // Wait for threads to finish so they can be joined
+        for (unsigned int i = 0; i < thread_count; i++) {
+            thread_list [i]->join ();
+        }
 
-    // Delete all created threads
-    for (unsigned int i = 0; i < thread_count; i++) {
-        delete thread_list [i];
+        // Delete all created threads
+        for (unsigned int i = 0; i < thread_count; i++) {
+            delete thread_list [i];
+        }
     }
 
     // Trailing newline for readability on the terminal
@@ -84,11 +94,43 @@ void parse_cli (int argc, char* argv [], int& upper_limit, int& thread_count) {
         }
 
         // An unknown argument has been issued
-        else
-            std::cerr << "\nUnknown argument: " << temp_string;
+        else {
+            std::cerr << "\nUnknown argument: " << temp_string
+                << "\nUse argument --help for more information.";
+            break;
+        }
 
         conversion_stream.clear ();
     }
+}
+
+// Print the help message if --help has been issued
+bool print_help (int argc, char* argv []) {
+    bool success = false;
+
+    if (argc == 2) {
+        std::stringstream check_help;
+        std::string temp_string = "";
+
+        check_help << argv [1];
+        check_help >> temp_string;
+
+        if (temp_string == "--help") {
+            std::cout << "\nMultithreaded Prime-Finder Benchmark"
+                << "\nAvailable Commands:"
+                << "\n\t--threads [count]"
+                << "\n\t\tNumber of threads that will be used for the benchmark."
+                << "\n\t\t(Current maximum threads that can be used for program is " << THREAD_LIMITER << ")"
+                << "\n\t--limit [stop at]"
+                << "\n\t\tDefines upper range limit for calculations."
+                << "\n\t\t(i.e. --limit 10000 will calculate all primes between 0 and 10000)"
+                << '\n';
+
+            success = true;
+        }
+    }
+
+    return success;
 }
 
 // Calculate prime numbers between 0 and the upper limit specified
